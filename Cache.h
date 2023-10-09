@@ -15,7 +15,6 @@
 #define L2_INDEX_SIZE (log2_floor(L2_SIZE/(BLOCK_SIZE*2)))
 #define L1_TAG_SIZE ((WORD_SIZE*8)-OFFSET_SIZE-L1_INDEX_SIZE)
 #define L2_TAG_SIZE ((WORD_SIZE*8)-OFFSET_SIZE-L1_INDEX_SIZE)
-
 /*******************/
 
 #define MODE_READ 1
