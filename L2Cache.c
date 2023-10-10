@@ -64,9 +64,9 @@ void initCache() {
     }
   }
 
-void accessL2(int address, unsigned char *data, int mode) {
+void accessL2(uint32_t address, uint32_t *data, uint32_t mode) {
 
-  unsigned int tag, index_n, offset;
+  uint32_t Tag, index, offset;
   
   Tag = address >> (OFFSET_SIZE + L2_INDEX_SIZE); // Why do I do this?
   index = indexExtractor(address, L2_INDEX_SIZE, OFFSET_SIZE);
