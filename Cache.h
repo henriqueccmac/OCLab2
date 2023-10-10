@@ -1,4 +1,5 @@
 #include "util.h"
+#include <math.h>
 
 #ifndef CACHE_H
 #define CACHE_H
@@ -10,15 +11,15 @@
 #define L2_SIZE (512 * BLOCK_SIZE)    // in bytes
 
 /*Fui eu que criei*/
-#define OFFSET_SIZE (log2_floor(BLOCK_SIZE))
+#define OFFSET_SIZE (log2(BLOCK_SIZE))
 
 #define L1_LINES (L1_SIZE/BLOCK_SIZE)
-#define L1_INDEX_SIZE (log2_floor(L1_LINES))
+#define L1_INDEX_SIZE (log2(L1_LINES))
 #define L1_TAG_SIZE ((WORD_SIZE*8)-OFFSET_SIZE-L1_INDEX_SIZE)
 
 #define L2_LINES (L2_SIZE/(BLOCK_SIZE*2))
-#define L2_INDEX_SIZE (log2_floor(L2_LINES))
-#define L2_TAG_SIZE ((WORD_SIZE*8)-OFFSET_SIZE-L1_INDEX_SIZE)
+#define L2_INDEX_SIZE (log2(L2_LINES))
+#define L2_TAG_SIZE ((WORD_SIZE*8)-OFFSET_SIZE-L2_INDEX_SIZE)
 /*******************/
 
 #define MODE_READ 1
