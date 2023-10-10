@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include "Cache.h"
 
+
 void resetTime();
 
 uint32_t getTime();
@@ -23,7 +24,7 @@ typedef struct CacheLine {
   uint8_t Valid;
   uint8_t Dirty;
   uint32_t Tag;
-  uint8_t Data[BLOCK_SIZE/WORD_SIZE];
+  uint8_t Data[BLOCK_SIZE];
 } CacheLine;
 
 
