@@ -44,8 +44,16 @@ void accessDRAM(uint32_t address, uint8_t *data, uint32_t mode) {
 
 /*********************** L1 cache *************************/
 
-void initCache() {    
-  for (int i = 0; i < L1_LINES; i++){
+void initCache() { cache.init = 0; }
+
+void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
+
+  uint32_t index, Tag, MemAddress, offset;
+  uint8_t TempBlock[BLOCK_SIZE];
+
+  /* init cache */
+  if (cache.init == 0) {
+    for (int i = 0; i < L1_LINES; i++){
       cache.line[i].Valid = 0;
       cache.line[i].Dirty = 0;
       cache.line[i].Tag = 0;
@@ -53,20 +61,15 @@ void initCache() {
       for (int j=0; j<BLOCK_SIZE; j+=WORD_SIZE)
         cache.line[i].Data[j] = 0;
     }
-  }
+  }  
 
-void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
-
-  uint32_t index, Tag, offset;
-  //uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (OFFSET_SIZE + L1_INDEX_SIZE); // Why do I do this?
   index = indexExtractor(address, L1_INDEX_SIZE, OFFSET_SIZE);
   offset = offsetExtractor(address, OFFSET_SIZE);
 
-  //uint32_t MemAddress;
-  //MemAddress = address >> (OFFSET_SIZE); // again this....!
-  //MemAddress = MemAddress << (OFFSET_SIZE); // address of the block in memory (address - offset)
+  MemAddress = address >> (OFFSET_SIZE); // again this....!
+  MemAddress = MemAddress << (OFFSET_SIZE); // address of the block in memory (address - offset)
 
   /* access Cache*/
 
@@ -85,12 +88,12 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   else{ 
     if (cache.line[index].Dirty) { // line has dirty block
-      accessDRAM(cache.line[index].Tag * (L1_SIZE / BLOCK_SIZE) * BLOCK_SIZE + index * BLOCK_SIZE, cache.line[index].Data, MODE_WRITE); // then write back old block
+      accessDRAM(MemAddress, cache.line[index].Data, MODE_WRITE); // then write back old block
       cache.line[index].Data[0] = 0;
       cache.line[index].Data[WORD_SIZE] = 0;
     }
 
-    accessDRAM(address - offset, cache.line[index].Data, MODE_READ); // get new block from DRAM 
+    accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from DRAM 
 
     if (mode == MODE_READ) {
       memcpy(data, &(cache.line[index].Data[offset]), WORD_SIZE);
