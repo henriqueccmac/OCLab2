@@ -1,4 +1,4 @@
-#include "L1Cache.h"
+#include "L2Cache.h"
 #include "Cache.h"
 
 
@@ -51,7 +51,7 @@ void initCache() {
       cache.linesL1[i].Tag = 0;
       cache.init = 1;
       for (int j=0; j<BLOCK_SIZE; j+=WORD_SIZE)
-        cache.line[i].Data[j] = 0;
+        cache.linesL1[i].Data[j] = 0;
     }
 
     for (int i = 0; i < L2_LINES; i++){
@@ -60,7 +60,7 @@ void initCache() {
       cache.linesL2[i].Tag = 0;
       cache.init = 1;
       for (int j=0; j<BLOCK_SIZE; j+=WORD_SIZE)
-        cache.line[i].Data[j] = 0;
+        cache.linesL2[i].Data[j] = 0;
     }
   }
 
@@ -68,66 +68,47 @@ void accessL2(int address, unsigned char *data, int mode) {
 
   unsigned int tag, index_n, offset;
   
-  tag = address / ((L2_SIZE / (BLOCK_SIZE * ASSOCIATIVITY_L2)) * BLOCK_SIZE);
-  index_n = (address / BLOCK_SIZE) % (L2_SIZE / (BLOCK_SIZE * ASSOCIATIVITY_L2));
-  offset = address % BLOCK_SIZE;
+  Tag = address >> (OFFSET_SIZE + L2_INDEX_SIZE); // Why do I do this?
+  index = indexExtractor(address, L2_INDEX_SIZE, OFFSET_SIZE);
+  offset = offsetExtractor(address, OFFSET_SIZE);
 
-  int found = 0;
-  int i = 0;
-  while (i < ASSOCIATIVITY_L2 && !found) {
-    if (cache.L2.Lines[index_n][i].Valid && cache.L2.Lines[index_n][i].Tag == tag) {
-      found = 1;
-    } else {
-      i++;
-    }
-  }
-
-  if (!found) {
-    i = 0;
-    while (i < ASSOCIATIVITY_L2 && cache.L2.Lines[index_n][i].Valid) {
-      i++;
-    }
-    if (i == ASSOCIATIVITY_L2) {
-      i = 0;
-      unsigned int min = cache.L2.Lines[index_n][0].Time;
-      for (int j = 1; j < ASSOCIATIVITY_L2; j++) {
-        if (cache.L2.Lines[index_n][j].Time < min) {
-          min = cache.L2.Lines[index_n][j].Time;
-          i = j;
-        }
-      }
-    }
-    if (cache.L2.Lines[index_n][i].Dirty) {
-      accessDRAM(cache.L2.Lines[index_n][i].Tag * (L2_SIZE / (BLOCK_SIZE * ASSOCIATIVITY_L2)) * BLOCK_SIZE + index_n * BLOCK_SIZE, cache.L2.Lines[index_n][i].Data, MODE_WRITE);
-      cache.L2.Lines[index_n][i].Data[0] = 0;
-      cache.L2.Lines[index_n][i].Data[WORD_SIZE] = 0;
-    }
-
-    accessDRAM(address - offset, cache.L2.Lines[index_n][i].Data, MODE_READ);
-
-    cache.L2.Lines[index_n][i].Valid = 1;
-    cache.L2.Lines[index_n][i].Dirty = 0;
-    cache.L2.Lines[index_n][i].Tag = tag;
-    cache.L2.Lines[index_n][i].Time = time;
-
-    if (mode == MODE_READ) {
-      memcpy(data, &(cache.L2.Lines[index_n][i].Data), BLOCK_SIZE);
+  if (cache.linesL2[index].Valid && cache.linesL2[index].Tag == Tag) {    
+    if (mode == MODE_READ) {    // read data from cache line
+      memcpy(data, &(cache.linesL2[index].Data[offset]), WORD_SIZE);
       time += L2_READ_TIME;
     }
-  } else {
-    if (mode == MODE_READ) {
-      memcpy(data, &(cache.L2.Lines[index_n][i].Data), BLOCK_SIZE);
-      time += L1_READ_TIME;
-      cache.L2.Lines[index_n][i].Time = time;
-    }
-    if (mode == MODE_WRITE) {
-      memcpy(&(cache.L2.Lines[index_n][i].Data), data, BLOCK_SIZE);
-      time += L1_WRITE_TIME;
-      cache.L2.Lines[index_n][i].Dirty = 1;
-      cache.L2.Lines[index_n][i].Time = time;
+
+    if (mode == MODE_WRITE) { // write data from cache line
+      memcpy(&(cache.linesL2[index].Data[offset]), data, WORD_SIZE);
+      time += L2_WRITE_TIME;
+      cache.linesL2[index].Dirty = 1;
     }
   }
-  
+
+  else{ 
+    if (cache.linesL2[index].Dirty) { // line has dirty block
+      accessDRAM(cache.linesL2[index].Tag * (L2_SIZE / BLOCK_SIZE) * BLOCK_SIZE + index * BLOCK_SIZE, cache.linesL2[index].Data, MODE_WRITE); // then write back old block
+      cache.linesL2[index].Data[0] = 0;
+      cache.linesL2[index].Data[WORD_SIZE] = 0;
+    }
+
+    accessDRAM(address - offset, cache.linesL2[index].Data, MODE_READ); // get new block from DRAM 
+
+    if (mode == MODE_READ) {
+      memcpy(data, &(cache.linesL2[index].Data[offset]), WORD_SIZE);
+      time += L2_READ_TIME;
+      cache.linesL2[index].Dirty = 0; 
+      cache.linesL2[index].Valid = 1;
+      cache.linesL2[index].Tag = Tag;
+    }
+    if (mode == MODE_WRITE) {
+      memcpy(&(cache.linesL2[index].Data[offset]), data, WORD_SIZE);
+      time += L2_WRITE_TIME;
+      cache.linesL2[index].Dirty = 1;
+      cache.linesL2[index].Valid = 1;
+      cache.linesL2[index].Tag = Tag;
+    }
+  } // if miss, then replaced with the correct block
 }
 
 void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {

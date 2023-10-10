@@ -16,7 +16,7 @@
 #define L1_INDEX_SIZE ((int)log2(L1_LINES))
 #define L1_TAG_SIZE ((WORD_SIZE*8)-OFFSET_SIZE-L1_INDEX_SIZE)
 
-#define L2_LINES (L2_SIZE/(BLOCK_SIZE*2))
+#define L2_LINES (L2_SIZE/(BLOCK_SIZE))
 #define L2_INDEX_SIZE ((int)log2(L2_LINES))
 #define L2_TAG_SIZE ((WORD_SIZE*8)-OFFSET_SIZE-L2_INDEX_SIZE)
 /*******************/
