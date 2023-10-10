@@ -66,11 +66,14 @@ void initCache() {
 
 void accessL2(uint32_t address, uint32_t *data, uint32_t mode) {
 
-  uint32_t Tag, index, offset;
+  uint32_t Tag, index, offset, MemAddress;
   
   Tag = address >> (OFFSET_SIZE + L2_INDEX_SIZE); // Why do I do this?
   index = indexExtractor(address, L2_INDEX_SIZE, OFFSET_SIZE);
   offset = offsetExtractor(address, OFFSET_SIZE);
+
+  MemAddress = address >> (OFFSET_SIZE); // again this....!
+  MemAddress = MemAddress << (OFFSET_SIZE); // address of the block in memory (address - offset)
 
   if (cache.linesL2[index].Valid && cache.linesL2[index].Tag == Tag) {    
     if (mode == MODE_READ) {    // read data from cache line
@@ -87,12 +90,12 @@ void accessL2(uint32_t address, uint32_t *data, uint32_t mode) {
 
   else{ 
     if (cache.linesL2[index].Dirty) { // line has dirty block
-      accessDRAM(cache.linesL2[index].Tag * (L2_SIZE / BLOCK_SIZE) * BLOCK_SIZE + index * BLOCK_SIZE, cache.linesL2[index].Data, MODE_WRITE); // then write back old block
+      accessDRAM(MemAddress, cache.linesL2[index].Data, MODE_WRITE); // then write back old block
       cache.linesL2[index].Data[0] = 0;
       cache.linesL2[index].Data[WORD_SIZE] = 0;
     }
 
-    accessDRAM(address - offset, cache.linesL2[index].Data, MODE_READ); // get new block from DRAM 
+    accessDRAM(MemAddress, cache.linesL2[index].Data, MODE_READ); // get new block from DRAM 
 
     if (mode == MODE_READ) {
       memcpy(data, &(cache.linesL2[index].Data[offset]), WORD_SIZE);
@@ -113,16 +116,15 @@ void accessL2(uint32_t address, uint32_t *data, uint32_t mode) {
 
 void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
-  uint32_t index, Tag, offset;
-  //uint8_t TempBlock[BLOCK_SIZE];
+  uint32_t index, Tag, MemAddress, offset;
+  uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (OFFSET_SIZE + L1_INDEX_SIZE); // Why do I do this?
   index = indexExtractor(address, L1_INDEX_SIZE, OFFSET_SIZE);
   offset = offsetExtractor(address, OFFSET_SIZE);
 
-  //uint32_t MemAddress;
-  //MemAddress = address >> (OFFSET_SIZE); // again this....!
-  //MemAddress = MemAddress << (OFFSET_SIZE); // address of the block in memory (address - offset)
+  MemAddress = address >> (OFFSET_SIZE); // again this....!
+  MemAddress = MemAddress << (OFFSET_SIZE); // address of the block in memory (address - offset)
 
   /* access Cache*/
 
@@ -141,12 +143,12 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   else{ 
     if (cache.linesL1[index].Dirty) { // line has dirty block
-      accessL2(cache.linesL1[index].Tag * (L1_SIZE / BLOCK_SIZE) * BLOCK_SIZE + index * BLOCK_SIZE, cache.linesL1[index].Data, MODE_WRITE); // then write back old block
+      accessL2(MemAddress, cache.line[index].Data, MODE_WRITE); // then write back old block
       cache.linesL1[index].Data[0] = 0;
       cache.linesL1[index].Data[WORD_SIZE] = 0;
     }
 
-    accessL2(address - offset, cache.linesL1[index].Data, MODE_READ); // get new block from DRAM 
+    accessL2(MemAddress, TempBlock, MODE_READ); // get new block from DRAM 
 
     if (mode == MODE_READ) {
       memcpy(data, &(cache.linesL1[index].Data[offset]), WORD_SIZE);
