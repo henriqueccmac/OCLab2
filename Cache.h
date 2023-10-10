@@ -1,4 +1,3 @@
-#include "util.h"
 #include <math.h>
 
 #ifndef CACHE_H
