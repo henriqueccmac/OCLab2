@@ -58,6 +58,8 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
       cache.line[i].Dirty = 0;
       cache.line[i].Tag = 0;
       cache.init = 1;
+      for (int j=0; j<BLOCK_SIZE; j+=WORD_SIZE)
+        cache.line[i].Data[j] = 0;
     }
   }  
 
